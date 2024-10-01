@@ -16,11 +16,23 @@ class ProjectController extends Controller
     {
         $query = Project::query(); //means: "Start preparing a request to get data from the projects table.
 
+
+        // If a 'name' parameter is passed in the request, filter projects where the name is similar.
+        if (request("name")) {
+            $query->where("name", "like", "%" . request("name") . "%");
+        }
+        // If a 'status' parameter is passed in the request, filter projects with the same status.
+
+        if (request("status")) {
+            $query->where("status", request("status"));
+        }
         $projects = $query->paginate(10);
 
 
+    // Return the filtered projects and query parameters to the front-end using Inertia.js
         return inertia('Project/Index', [
             "projects" => ProjectResource::collection($projects),
+            'queryParams' => request()->query() ?: null,
 
         ]);
     }
