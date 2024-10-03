@@ -16,6 +16,9 @@ class ProjectController extends Controller
     {
         $query = Project::query(); //means: "Start preparing a request to get data from the projects table.
 
+        $sortField = request("sort_field", "created_at"); // Default sorting column
+        $sortDirection = request("sort_direction", "desc"); // Default sorting direction
+
 
         // If a 'name' parameter is passed in the request, filter projects where the name is similar.
         if (request("name")) {
@@ -26,7 +29,8 @@ class ProjectController extends Controller
         if (request("status")) {
             $query->where("status", request("status"));
         }
-        $projects = $query->paginate(10);
+        $projects = $query->orderBy($sortField, $sortDirection)  // Apply sorting to the query
+                            ->paginate(10);
 
 
     // Return the filtered projects and query parameters to the front-end using Inertia.js
