@@ -1,11 +1,3 @@
-import Pagination from "@/Components/Pagination";
-import SelectInput from "@/Components/SelectInput";
-import TableHeading from "@/Components/TableHeading";
-import TextInput from "@/Components/TextInput";
-import {
-  TASK_STATUS_CLASS_MAP,
-  TASK_STATUS_TEXT_MAP,
-} from "@/Constansts.jsx";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head, Link, router } from "@inertiajs/react";
 import TasksTable from "./TasksTable";

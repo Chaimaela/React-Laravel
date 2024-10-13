@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests;
 
+use Illuminate\Contracts\Validation\Rule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule as ValidationRule;
 
 class StoreProjectRequest extends FormRequest
 {
@@ -11,7 +13,7 @@ class StoreProjectRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -22,7 +24,11 @@ class StoreProjectRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'name' => ["required", "max:255"],
+            'image' => ['nullable', 'image'],
+            'description' => ["string"],
+            'due_date' => ['nullable', 'date'],
+            'status' => ['required', ValidationRule::in(["pending",'in_progress','completed'])]
         ];
     }
 }
