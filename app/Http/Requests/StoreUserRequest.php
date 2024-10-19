@@ -3,6 +3,8 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Validation\Rules\Password as RulesPassword;
 
 class StoreUserRequest extends FormRequest
 {
@@ -11,7 +13,7 @@ class StoreUserRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -22,7 +24,13 @@ class StoreUserRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            "name" => ["required", "string", "max:255"],
+            "email" => ["required", "string", "email", "unique:users,email"],
+            "password" => [
+                "required",
+                'confirmed',
+                RulesPassword::min(8)->letters()->symbols(),
+            ],
         ];
     }
 }
