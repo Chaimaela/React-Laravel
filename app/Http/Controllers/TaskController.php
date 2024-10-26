@@ -2,10 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\ProjectResource;
+use App\Http\Resources\TaskResource;
+use App\Http\Resources\UserResource;
+use App\Models\Project;
 use App\Models\Task;
 use App\Http\Requests\StoreTaskRequest;
 use App\Http\Requests\UpdateTaskRequest;
-use App\Http\Resources\TaskResource;
+use App\Models\User;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class TaskController extends Controller
 {
@@ -14,33 +21,27 @@ class TaskController extends Controller
      */
     public function index()
     {
-        $query = Task::query(); //means: "Start preparing a request to get data from the tasks table.
+        $query = Task::query();
 
-        $sortField = request("sort_field", "created_at"); // Default sorting column
-        $sortDirection = request("sort_direction", "desc"); // Default sorting direction
+        $sortField = request("sort_field", 'created_at');
+        $sortDirection = request("sort_direction", "desc");
 
-
-        // If a 'name' parameter is passed in the request, filter tasks where the name is similar.
         if (request("name")) {
             $query->where("name", "like", "%" . request("name") . "%");
         }
-        // If a 'status' parameter is passed in the request, filter tasks with the same status.
-
         if (request("status")) {
             $query->where("status", request("status"));
         }
-        $tasks = $query->orderBy($sortField, $sortDirection)  // Apply sorting to the query
-                            ->paginate(10);
 
+        $tasks = $query->orderBy($sortField, $sortDirection)
+            ->paginate(10)
+            ->onEachSide(1);
 
-    // Return the filtered tasks and query parameters to the front-end using Inertia.js
-        return inertia('Task/Index', [
+        return inertia("Task/Index", [
             "tasks" => TaskResource::collection($tasks),
             'queryParams' => request()->query() ?: null,
-
+            'success' => session('success'),
         ]);
-
-        
     }
 
     /**
@@ -48,7 +49,13 @@ class TaskController extends Controller
      */
     public function create()
     {
-        //
+        $projects = Project::query()->orderBy('name', 'asc')->get();
+        $users = User::query()->orderBy('name', 'asc')->get();
+
+        return inertia("Task/Create", [
+            'projects' => ProjectResource::collection($projects),
+            'users' => UserResource::collection($users),
+        ]);
     }
 
     /**
@@ -56,7 +63,18 @@ class TaskController extends Controller
      */
     public function store(StoreTaskRequest $request)
     {
-        //
+        $data = $request->validated();
+        /** @var $image \Illuminate\Http\UploadedFile */;
+        $image = $data['image'] ?? null;
+        $data['created_by'] = Auth::id();
+        $data['updated_by'] = Auth::id();
+        if ($image) {
+            $data['image_path'] = $image -> store('task/' .Str::random(), 'public');
+        }
+        Task::create($data);
+
+        return to_route('task.index')
+            ->with('success', 'Task was created');
     }
 
     /**
@@ -64,7 +82,9 @@ class TaskController extends Controller
      */
     public function show(Task $task)
     {
-        //
+        return inertia('Task/Show', [
+            'task' => new TaskResource($task),
+        ]);
     }
 
     /**
@@ -72,7 +92,14 @@ class TaskController extends Controller
      */
     public function edit(Task $task)
     {
-        //
+        $projects = Project::query()->orderBy('name', 'asc')->get();
+        $users = User::query()->orderBy('name', 'asc')->get();
+
+        return inertia("Task/Edit", [
+            'task' => new TaskResource($task),
+            'projects' => ProjectResource::collection($projects),
+            'users' => UserResource::collection($users),
+        ]);
     }
 
     /**
@@ -80,7 +107,19 @@ class TaskController extends Controller
      */
     public function update(UpdateTaskRequest $request, Task $task)
     {
-        //
+        $data = $request->validated();
+        $image = $data['image'] ?? null;
+        $data['updated_by'] = Auth::id();
+        if ($image) {
+            if ($task->image_path) {
+                Storage::disk('public')->deleteDirectory(dirname($task->image_path));
+            }
+            $data['image_path'] = $image->store('task/' . Str::random(), 'public');
+        }
+        $task->update($data);
+
+        return to_route('task.index')
+            ->with('success', "Task \"$task->name\" was updated");
     }
 
     /**
@@ -88,6 +127,14 @@ class TaskController extends Controller
      */
     public function destroy(Task $task)
     {
-        //
+        $name = $task->name;
+        $task->delete();
+        if ($task->image_path) {
+            Storage::disk('public')->deleteDirectory(dirname($task->image_path));
+        }
+        return to_route('task.index')
+            ->with('success', "Task \"$name\" was deleted");
     }
+
+ 
 }
